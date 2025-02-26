@@ -1,0 +1,9 @@
+pygame
+numpy
+pillow
+matplotlib
+moviepy
+numba
+pyqt5
+cairosvg
+sympy
