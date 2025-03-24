@@ -557,7 +557,9 @@ class GenerativeArtStudio:
             self.fractal_gen.zoom = self.zoom_slider.value
             
             if self.fractal_gen.type == "julia":
-                self.fractal_gen.julia_c = complex(self.julia_real_slider.value, self.julia_imag_slider.value)
+                # Check if the sliders exist before accessing them
+                if hasattr(self, 'julia_real_slider') and hasattr(self, 'julia_imag_slider'):
+                    self.fractal_gen.julia_c = complex(self.julia_real_slider.value, self.julia_imag_slider.value)
                 
             # Generate new fractal
             self.art_surface = self.fractal_gen.generate(WIDTH, HEIGHT)
@@ -641,7 +643,7 @@ class GenerativeArtStudio:
                         self.recording = False
                         self.record_btn.color = UI_BUTTON_COLOR
                         self.record_btn.text = "Record Animation"
-                        
+            
             # Update display
             pygame.display.flip()
             clock.tick(60)
@@ -714,10 +716,16 @@ class GenerativeArtStudio:
             self.julia_btn.selected = False
             
             # Update UI to remove Julia-specific controls
+            julia_controls = []
+            if hasattr(self, 'julia_real_slider'):
+                julia_controls.append(self.julia_real_slider)
+            if hasattr(self, 'julia_imag_slider'):
+                julia_controls.append(self.julia_imag_slider)
+            
             self.ui_elements = [elem for elem in self.ui_elements 
-                               if not elem in [self.julia_real_slider, self.julia_imag_slider]]
+                               if not elem in julia_controls]
             self.fractal_controls = [elem for elem in self.fractal_controls 
-                                   if not elem in [self.julia_real_slider, self.julia_imag_slider]]
+                                   if not elem in julia_controls]
             
             self.regenerate_art()
             
@@ -808,51 +816,69 @@ class GenerativeArtStudio:
     
     def save_image(self):
         # Create output directory if it doesn't exist
-        if not os.path.exists("output"):
-            os.makedirs("output")
+        try:
+            if not os.path.exists("output"):
+                os.makedirs("output")
             
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        mode = "fractal" if self.generator_mode == "fractal" else "particle"
-        subtype = self.fractal_gen.type if self.generator_mode == "fractal" else ""
-        
-        filename = f"output/generative_art_{mode}_{subtype}_{timestamp}.png"
-        
-        # Save the canvas
-        if self.generator_mode == "fractal":
-            pygame.image.save(self.art_surface, filename)
-        else:
-            pygame.image.save(canvas, filename)
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            mode = "fractal" if self.generator_mode == "fractal" else "particle"
+            subtype = self.fractal_gen.type if self.generator_mode == "fractal" else ""
             
-        print(f"Image saved as {filename}")
-        
-        # Show confirmation in UI (could be improved with a proper notification system)
-        self.save_btn.text = "Saved!"
-        pygame.time.set_timer(pygame.USEREVENT, 1000)  # Reset text after 1 second
+            filename = f"output/art_{mode}_{subtype}_{timestamp}.png"
+            
+            if self.generator_mode == "fractal":
+                pygame.image.save(self.art_surface, filename)
+            else:
+                pygame.image.save(canvas, filename)
+            
+            print(f"Image saved as {filename}")
+            
+            # Show confirmation in UI (could be improved with a proper notification system)
+            self.save_btn.text = "Saved!"
+            pygame.time.set_timer(pygame.USEREVENT, 1000)  # Reset text after 1 second
+        except Exception as e:
+            print(f"Error saving image: {e}")
+            # Show error in UI
+            self.save_btn.text = "Save Error!"
+            self.save_btn.color = (255, 0, 0)
+            pygame.time.set_timer(pygame.USEREVENT, 2000)  # Reset text after 2 seconds
         
     def save_animation(self):
         if not self.animation_frames:
+            print("No animation frames to save.")
             return
             
-        # Create output directory if it doesn't exist
-        if not os.path.exists("output"):
-            os.makedirs("output")
+        try:
+            # Create output directory if it doesn't exist
+            if not os.path.exists("output"):
+                os.makedirs("output")
             
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        mode = "fractal" if self.generator_mode == "fractal" else "particle"
-        subtype = self.fractal_gen.type if self.generator_mode == "fractal" else ""
-        
-        # Save individual frames
-        folder_name = f"output/animation_{mode}_{subtype}_{timestamp}"
-        os.makedirs(folder_name)
-        
-        for i, frame in enumerate(self.animation_frames):
-            pygame.image.save(frame, f"{folder_name}/frame_{i:04d}.png")
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            mode = "fractal" if self.generator_mode == "fractal" else "particle"
+            subtype = self.fractal_gen.type if self.generator_mode == "fractal" else ""
             
-        print(f"Animation frames saved to {folder_name}")
-        print(f"You can convert these frames to a video using FFmpeg:")
-        print(f"ffmpeg -framerate 30 -i {folder_name}/frame_%04d.png -c:v libx264 -pix_fmt yuv420p {folder_name}/animation.mp4")
+            # Save individual frames
+            folder_name = f"output/animation_{mode}_{subtype}_{timestamp}"
+            os.makedirs(folder_name)
+            
+            for i, frame in enumerate(self.animation_frames):
+                pygame.image.save(frame, f"{folder_name}/frame_{i:04d}.png")
+            
+            print(f"Animation frames saved to {folder_name}")
+            print("You can convert these frames to a video using FFmpeg:")
+            print(f"ffmpeg -framerate 30 -i {folder_name}/frame_%04d.png -c:v libx264 -pix_fmt yuv420p {folder_name}/animation.mp4")
+            
+            # Reset animation frames to free memory
+            self.animation_frames = []
+            self.frame_count = 0
+        except Exception as e:
+            print(f"Error saving animation: {e}")
+            # Show error in UI
+            self.record_btn.text = "Save Error!"
+            self.record_btn.color = (255, 0, 0)
+            pygame.time.set_timer(pygame.USEREVENT, 2000)  # Reset text after 2 seconds
 
 # Additional fractal types
 class FlameGenerator:

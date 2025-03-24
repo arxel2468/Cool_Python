@@ -551,8 +551,17 @@ try:
     collision_sound = pygame.mixer.Sound("collision.wav")  # You would need to provide this file
     target_sound = pygame.mixer.Sound("target.wav")  # You would need to provide this file
     sound_available = True
-except:
+    print("Sound effects loaded successfully.")
+except Exception as e:
     sound_available = False
+    print(f"Sound effects could not be loaded: {e}")
+    print("The game will run without sound effects.")
+    # Create dummy sound objects to avoid checking sound_available everywhere
+    class DummySound:
+        def play(self): pass
+        def set_volume(self, vol): pass
+    collision_sound = DummySound()
+    target_sound = DummySound()
 
 # Create objects
 polygon = Polygon(WIDTH/2, HEIGHT/2, shape_radius, polygon_sides)
@@ -778,4 +787,9 @@ while running:
     
     pygame.display.flip()
 
-pygame.quit()
+# Clean up resources
+try:
+    pygame.quit()
+    print("Game exited successfully.")
+except Exception as e:
+    print(f"Error during cleanup: {e}")
